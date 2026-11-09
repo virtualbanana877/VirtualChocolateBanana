@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>バーチャルのチョコバナナぬりぬり</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#ffd6e3;--bg2:#fff1c7;--ink:#4a2412;--panel:#fff8f0;--track:#fff3e6;--fill:#7a4020;--warn:#ff5a5f;--btn:#4a2412;--onbtn:#fff8f0;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#3a1f33;--bg2:#2b2540;--ink:#ffe9d6;--panel:#4a3340;--track:#2a1d2b;--fill:#d98a52;--btn:#ffd54a;--onbtn:#3b1d0c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg1:#3a1f33;--bg2:#2b2540;--ink:#ffe9d6;--panel:#4a3340;--track:#2a1d2b;--fill:#d98a52;--btn:#ffd54a;--onbtn:#3b1d0c;color-scheme:dark}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+background:radial-gradient(circle at 20% 15%,var(--bg2),transparent 55%),var(--bg1);color:var(--ink);font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;font-weight:500}
+canvas{position:fixed;inset:0;touch-action:none;display:block}
+.hud{position:fixed;left:0;right:0;pointer-events:none;box-sizing:border-box}
+.top{top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 0}
+.bottom{bottom:0;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;gap:10px;justify-content:center}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px}
+.row span{width:4.2em;font-weight:900}
+.bar{flex:1;height:12px;border-radius:8px;background:var(--track);overflow:hidden;box-shadow:inset 0 0 0 2px var(--ink)}
+.bar i{display:block;height:100%;width:100%;background:var(--fill);border-radius:8px;transition:width .08s}
+.bar.warn i{width:0;background:var(--warn)}
+.row b{width:2.6em;text-align:right;font-weight:900}
+button,.btn{pointer-events:auto;font:inherit;font-weight:900;font-size:17px;border:0;border-radius:999px;padding:13px 26px;background:var(--btn);color:var(--onbtn);cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost{background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.sws{gap:10px}
+#ttl{text-align:center;font-weight:900;font-size:16px;line-height:1.2;margin-bottom:6px}
+.card ol{text-align:left;font-size:14px;padding-left:1.4em;margin:10px 0 14px;line-height:1.65}
+#helpBtn{position:fixed;right:16px;top:calc(env(safe-area-inset-top,0px) + 84px);width:30px;height:30px;padding:0;font-size:16px;border-radius:50%}
+.bottom button{font-size:15px;padding:12px 18px}
+#rImg{display:block;margin:6px auto 4px;max-height:170px;max-width:100%;border-radius:14px}
+#rImg[hidden],.btn[hidden]{display:none}
+.card{max-height:92vh;overflow:auto}
+.sw{pointer-events:auto;width:30px;height:30px;padding:0;border-radius:50%;box-shadow:0 0 0 2px var(--ink);transition:transform .1s,opacity .2s}
+.sw.on{transform:scale(1.18);box-shadow:0 0 0 3px var(--ink),0 0 0 6px var(--panel)}
+.sw:disabled{opacity:.35;cursor:default}
+#msg{position:fixed;left:0;right:0;top:22%;text-align:center;font-weight:900;font-size:26px;pointer-events:none;opacity:0;transition:opacity .2s}
+#msg.show{opacity:1}
+#hint{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);text-align:center;font-size:13px;pointer-events:none;transition:opacity .4s}
+#result,#help{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(40,20,10,.45);padding:20px}
+#result[hidden],#help[hidden]{display:none}
+.card{background:var(--panel);color:var(--ink);border-radius:24px;padding:22px 22px 18px;width:min(340px,100%);text-align:center;box-shadow:0 0 0 3px var(--ink)}
+.card h2{margin:0 0 4px;font-size:15px}
+.score{font-size:64px;font-weight:900;line-height:1.1}
+.score small{font-size:18px}
+.rank{font-size:20px;font-weight:900;margin-bottom:8px}
+.card dl{margin:10px 0 16px;display:grid;grid-template-columns:1fr auto;gap:5px 12px;text-align:left;font-size:14px}
+.card dt{margin:0}.card dd{margin:0;font-weight:900}
+.card .acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.card button,.card .btn{font-size:15px;padding:11px 18px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud top">
+  <div id="ttl">バーチャルのチョコバナナぬりぬり</div>
+  <div class="row"><span>チョコ</span><div class="bar"><i id="gChoco"></i></div><b id="pChoco">100</b></div>
+  <div class="row"><span>ぐらぐら</span><div class="bar warn"><i id="gStrain"></i></div><b></b></div>
+  <div class="row sws"><span id="lblColor">いろ</span><button class="sw on" data-c="brown" aria-label="茶色" style="background:#5a2e14"></button><button class="sw" data-c="white" aria-label="白" style="background:#fffdf8"></button><button class="sw" data-c="pink" aria-label="ピンク" style="background:#ff8cb8"></button><button class="sw" data-c="blue" aria-label="水色" style="background:#7fd3f5"></button></div>
+</div>
+<div id="msg"></div>
+<div id="hint">指でなぞって塗る。止めるとドロッと垂れるよ</div>
+<div class="hud bottom"><button id="btnReset" class="ghost">やり直し</button><button id="btnSpray" class="ghost">スプレー</button><button id="btnDone">完成!</button></div>
+<button id="helpBtn" class="ghost" aria-label="あそびかた">?</button>
+<div id="help"><div class="card">
+  <h2 style="font-size:20px">あそびかた</h2>
+  <ol>
+   <li>色を選んで、指でなぞってチョコを塗ろう。止めるとドロッと垂れるよ。</li>
+   <li>塗りすぎると大きく垂れてグラグラ。限界を超えるとバナナが折れちゃう!</li>
+   <li>「スプレー」を押すとチョコが固まって、カラフルな粒がかかるよ。</li>
+   <li>押したあとはチョコペンになって、垂れない細い線で描けるよ。色も変えてOK。</li>
+   <li>「完成!」で採点。完成形の画像つきでXに投稿できるよ。</li>
+  </ol>
+  <div class="acts"><button id="btnHelpOk">はじめる</button></div>
+</div></div>
+<div id="result" hidden>
+  <div class="card">
+    <h2 id="rTitle">できあがり</h2>
+    <img id="rImg" alt="できあがったチョコバナナ" hidden>
+    <div class="score"><span id="rScore">0</span><small>点</small></div>
+    <div class="rank" id="rRank"></div>
+    <dl id="rList"></dl>
+    <div class="acts"><button id="btnAgain">もう一回</button><button id="btnShare" class="ghost">Xに投稿</button><a id="btnSave" class="btn ghost" download="chocobanana.png" hidden style="background:var(--panel);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)">画像を保存</a><p id="shareNote" hidden style="flex-basis:100%;margin:6px 0 0;font-size:12px"></p></div>
+  </div>
+</div>
+<script>
+(()=>{
+const W=360,H=640,C=4,GX=80,GY=90,COLS=50,ROWS=125,TOP=110,LEN=400,PX=180,PY=610,PI=Math.PI;
+const cv=document.getElementById('c');let ctx=cv.getContext('2d');const mainCtx=ctx;
+const $=id=>document.getElementById(id);
+let S=1,OX=0,OY=0,DPR=1;
+function resize(){DPR=Math.min(devicePixelRatio||1,2);const w=innerWidth,h=innerHeight;cv.width=w*DPR;cv.height=h*DPR;cv.style.width=w+'px';cv.style.height=h+'px';S=Math.min(w/W,h/H);OX=(w-W*S)/2;OY=(h-H*S)/2}
+addEventListener('resize',resize);resize();
+
+/* banana geometry */
+const xc=t=>170+22*(1-(2*t-1)**2);
+const hw=t=>Math.max(8,50*Math.pow(Math.sin(PI*Math.min(1,Math.max(0,t))),.55));
+const BANANA=new Path2D();
+{const n=48;for(let i=0;i<=n;i++){const t=i/n,y=TOP+LEN*t,x=xc(t)-hw(t);i?BANANA.lineTo(x,y):BANANA.moveTo(x,y)}
+for(let i=n;i>=0;i--){const t=i/n;BANANA.lineTo(xc(t)+hw(t),TOP+LEN*t)}BANANA.closePath()}
+
+/* chocolate grid */
+const th=new Float32Array(COLS*ROWS),mk=new Uint8Array(COLS*ROWS),ins=[];
+const cr=new Float32Array(COLS*ROWS),cg=new Float32Array(COLS*ROWS),cb=new Float32Array(COLS*ROWS);
+function mv(i,j,g){const w=g/(th[j]+g);cr[j]+=(cr[i]-cr[j])*w;cg[j]+=(cg[i]-cg[j])*w;cb[j]+=(cb[i]-cb[j])*w;th[j]+=g}
+const fresh=new Float32Array(COLS*ROWS),pen=new Uint8Array(COLS*ROWS);
+function rgbAt(i){return 'rgb('+(cr[i]|0)+','+(cg[i]|0)+','+(cb[i]|0)+')'}
+for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const x=GX+(c+.5)*C,y=GY+(r+.5)*C,t=(y-TOP)/LEN;
+ if(t>=0&&t<=1&&Math.abs(x-xc(t))<=hw(t)-1){mk[r*COLS+c]=1;ins.push(r*COLS+c)}}
+const chocCv=document.createElement('canvas');chocCv.width=COLS;chocCv.height=ROWS;
+const cctx=chocCv.getContext('2d'),img=cctx.createImageData(COLS,ROWS);
+
+/* state */
+let state='play',gauge=100,strain=0,drips=0,inA=0,outA=0,time=0,btime=0,ang=0,col='brown',started=false,oBank=0,spT=0,resShown=false,sprinkles=[],snap=false,penMode=false,resBlob=null,resUrl='';
+const PAL={brown:{b:[74,36,18],s:1,m:1},white:{b:[250,250,255],s:-1,m:.5},pink:{b:[255,140,184],s:1,m:.9},blue:{b:[120,205,245],s:1,m:.9}};
+const pc=()=>'rgb('+PAL[col].b.join(',')+')';
+let down=false,px=0,py=0,lx=0,ly=0,movedF=false,blobs=[],msgT=0,warnT=0;
+const CRACK=TOP+LEN*.55;
+
+function msg(t){const m=$('msg');m.textContent=t;m.classList.add('show');clearTimeout(msgT);msgT=setTimeout(()=>m.classList.remove('show'),1100)}
+
+function dep(x,y,k){
+ const cx=(x-GX)/C-.5,cy=(y-GY)/C-.5,R=(penMode?6:15)/C;
+ const x0=Math.max(0,Math.floor(cx-R)),x1=Math.min(COLS-1,Math.ceil(cx+R)),y0=Math.max(0,Math.floor(cy-R)),y1=Math.min(ROWS-1,Math.ceil(cy+R));
+ for(let r=y0;r<=y1;r++)for(let c=x0;c<=x1;c++){const d=Math.hypot(c-cx,r-cy)/R;if(d>=1)continue;
+  const a=k*(1-d),i=r*COLS+c;if(mk[i]){const w=Math.min(1,(penMode?5:2.5)*a/(th[i]+a)),P=PAL[col].b;if(penMode)pen[i]=1;cr[i]+=(P[0]-cr[i])*w;cg[i]+=(P[1]-cg[i])*w;cb[i]+=(P[2]-cb[i])*w;th[i]+=a;fresh[i]+=a;inA+=a}else{outA+=a;oBank+=a;if(!penMode&&oBank>6&&blobs.length<160){oBank-=6;blobs.push({x:GX+(c+.5)*C+(Math.random()-.5)*8,y:GY+(r+.5)*C,vy:20+Math.random()*40,r:2.5+Math.random()*3.5,c:pc()})}}}
+}
+function spend(v){gauge-=v;if(gauge<=0){gauge=0;msg('チョコ切れ!')}}
+function paintTo(x,y){
+ const dx=x-lx,dy=y-ly,d=Math.hypot(dx,dy);if(d<.01)return;
+ const n=Math.max(1,Math.ceil(d/3)),sl=d/n;
+ for(let s=1;s<=n&&gauge>0;s++){dep(lx+dx*s/n,ly+dy*s/n,(penMode?.8:.26)*sl/3);spend((penMode?.015:.04)*sl)}
+ lx=x;ly=y;
+}
+
+function step(){
+ for(let r=ROWS-2;r>=0;r--){const row=r*COLS;
+  for(let c=0;c<COLS;c++){const i=row+c;let t=th[i];if(t<.005){th[i]=0;continue}if(pen[i])continue;
+   let f;
+   if(mk[i]){
+    if(t>3.0&&Math.random()<.06){th[i]-=1.4;t=th[i];blobs.push({x:GX+(c+.5)*C,y:GY+(r+.5)*C,vy:15+Math.random()*25,r:4+Math.random()*3.5,c:rgbAt(i)});drips++;strain+=.035;if(drips%4===1)msg('ダラッ…')}
+    f=(t-.8)*.035;if(t>1.3)f+=(t-1.3)*.12;if(f<=0)continue;
+   }else{if(t>.3&&blobs.length<160)blobs.push({x:GX+(c+.5)*C,y:GY+(r+.5)*C,vy:60,r:Math.min(5,2+t*2),c:rgbAt(i)});th[i]=0;continue}
+   f=Math.min(f,t);th[i]-=f;const j=i+COLS;
+   mv(i,j,f*.88);
+   if(c>0)mv(i,j-1,f*.06);else mv(i,j,f*.06);
+   if(c<COLS-1)mv(i,j+1,f*.06);else mv(i,j,f*.06);
+  }}
+ const b=(ROWS-1)*COLS;for(let c=0;c<COLS;c++)th[b+c]*=.6;
+}
+function updBlobs(dt){for(let i=blobs.length-1;i>=0;i--){const b=blobs[i];b.vy+=900*dt;b.y+=b.vy*dt;if(b.y>H+30)blobs.splice(i,1)}}
+function freeze(){for(let i=0;i<th.length;i++)if(!mk[i])th[i]=0}
+function tick(dt){
+ if(down&&!movedF&&gauge>0&&!penMode){dep(px,py,.05);spend(.05)}
+ movedF=false;
+ step();
+ 
+ let heavy=0;for(let k=0;k<ins.length;k++){const t=th[ins[k]];if(t>2.2&&!pen[ins[k]])heavy+=t-2.2}
+ strain+=(heavy*.017-.12)*dt;if(strain<0)strain=0;
+ if(strain>.6&&time-warnT>1.6){warnT=time;msg('ミシミシ…')}
+ if(strain>=1){state='broken';btime=0;down=false;freeze();msg('ポキッ!');try{navigator.vibrate&&navigator.vibrate([80,40,120])}catch(e){}}
+}
+
+/* drawing */
+function drawBanana(){
+ ctx.lineCap='round';ctx.lineJoin='round';
+ ctx.strokeStyle='#d9a066';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(xc(1),TOP+LEN-10);ctx.lineTo(xc(1),PY-4);ctx.stroke();
+ const g=ctx.createLinearGradient(110,0,250,0);g.addColorStop(0,'#fffaee');g.addColorStop(.55,'#fff0d2');g.addColorStop(1,'#f5dfb4');
+ ctx.fillStyle=g;ctx.fill(BANANA);ctx.lineWidth=3;ctx.strokeStyle='#e3c78f';ctx.stroke(BANANA);
+ ctx.strokeStyle='rgba(255,255,255,0)';ctx.lineWidth=6;ctx.beginPath();
+ for(let i=6;i<=42;i++){const t=i/48,x=xc(t)-hw(t)*.55,y=TOP+LEN*t;i===6?ctx.moveTo(x,y):ctx.lineTo(x,y)}ctx.stroke();
+ 
+ ctx.fillStyle='#b88a3a';ctx.beginPath();ctx.ellipse(xc(0),TOP+1,6,4,0,0,7);ctx.fill();
+ const fx=xc(.42),fy=TOP+LEN*.42;
+ ctx.fillStyle='#3b2a1a';ctx.beginPath();ctx.arc(fx-15,fy,4.5,0,7);ctx.fill();ctx.beginPath();ctx.arc(fx+15,fy,4.5,0,7);ctx.fill();
+ ctx.strokeStyle='#3b2a1a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(fx,fy+6,8,.15*PI,.85*PI);ctx.stroke();
+ ctx.fillStyle='rgba(255,120,140,.55)';ctx.beginPath();ctx.ellipse(fx-26,fy+9,6,4,0,0,7);ctx.fill();ctx.beginPath();ctx.ellipse(fx+26,fy+9,6,4,0,0,7);ctx.fill();
+ ctx.imageSmoothingEnabled=true;ctx.shadowColor='rgba(60,30,10,.35)';ctx.shadowBlur=4;ctx.shadowOffsetY=2;ctx.drawImage(chocCv,GX,GY,COLS*C,ROWS*C);ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+ ctx.fillStyle=ctx.strokeStyle=pc();
+ for(const b of blobs){ctx.fillStyle=ctx.strokeStyle=b.c||pc();ctx.lineWidth=b.r*.8;ctx.beginPath();ctx.moveTo(b.x,b.y-Math.min(40,b.vy*.12));ctx.lineTo(b.x,b.y);ctx.stroke();ctx.beginPath();ctx.ellipse(b.x,b.y,b.r,b.r*1.4,0,0,7);ctx.fill()}
+ ctx.lineWidth=3.2;
+ for(const s of sprinkles){if(th[s.i]<.2||fresh[s.i]-s.b0>.5)continue;const p=snap?1:Math.min(1,Math.max(0,(time-s.t0-s.d)/.5));if(p<=0)continue;const y=s.y-(1-p)*(1-p)*240;ctx.globalAlpha=Math.min(1,p*3);ctx.strokeStyle=s.c;ctx.save();ctx.translate(s.x,y);ctx.rotate(s.a+(1-p)*3);ctx.beginPath();ctx.moveTo(-3.5,0);ctx.lineTo(3.5,0);ctx.stroke();ctx.restore()}
+ ctx.globalAlpha=1;
+}
+function updChoco(){
+ const d=img.data;
+ for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const i=r*COLS+c,p=i*4,t=th[i];
+  if(t<.02){d[p+3]=0;continue}
+  const L=c>0?th[i-1]:t,R=c<COLS-1?th[i+1]:t;let h=(L-R)*45;h=h<-20?-20:h>55?55:h;const k=Math.min(t,3)*8;
+  const rr=cr[i],gg=cg[i],bb=cb[i],lt=rr*.3+gg*.59+bb*.11>190,wet=!pen[i],q=(k+h*(wet?1.6:1))*(lt?-.5:.95),sp=wet?Math.min(70,Math.max(0,(L-R)*90-10)):0;d[p]=rr+q+sp;d[p+1]=gg+q*.8+sp;d[p+2]=bb+q*.7+sp;d[p+3]=Math.min(255,t*560)}
+ cctx.putImageData(img,0,0);
+}
+function render(){
+ ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,innerWidth,innerHeight);
+ ctx.translate(OX,OY);ctx.scale(S,S);
+ if(state==='broken'){
+  const bt=Math.min(btime,2.2);
+  ctx.save();ctx.translate(PX,PY);ctx.rotate(.05*Math.min(1,bt*3));ctx.translate(-PX,-PY);ctx.beginPath();ctx.rect(0,CRACK,W,H);ctx.clip();drawBanana();ctx.restore();
+  ctx.save();const cx=xc(.55);ctx.translate(cx-bt*45,CRACK+bt*bt*260);ctx.rotate(-bt*1.1);ctx.translate(-cx,-CRACK);ctx.beginPath();ctx.rect(0,0,W,CRACK);ctx.clip();drawBanana();ctx.restore();
+ }else{
+  ang=state==='play'?Math.pow(strain,1.4)*.12*Math.sin(time*(12+strain*20)):0;
+  ctx.save();ctx.translate(PX,PY);ctx.rotate(ang);ctx.translate(-PX,-PY);drawBanana();ctx.restore();
+ }
+ if(down&&state==='play'){ctx.strokeStyle='rgba(74,36,18,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,15,0,7);ctx.stroke()}
+}
+
+/* input */
+function toW(e){
+ const r=cv.getBoundingClientRect();let x=(e.clientX-r.left-OX)/S,y=(e.clientY-r.top-OY)/S;
+ const dx=x-PX,dy=y-PY,co=Math.cos(ang),si=Math.sin(ang);
+ return[PX+dx*co+dy*si,PY-dx*si+dy*co];
+}
+cv.addEventListener('pointerdown',e=>{if(state!=='play')return;e.preventDefault();cv.setPointerCapture(e.pointerId);down=true;[px,py]=toW(e);lx=px;ly=py;$('hint').style.opacity=0;lockSw();if(penMode&&gauge>0){dep(px,py,.9);spend(.2)}});
+cv.addEventListener('pointermove',e=>{if(!down||state!=='play')return;e.preventDefault();const[x,y]=toW(e);if(Math.hypot(x-px,y-py)>.6)movedF=true;paintTo(x,y);px=x;py=y});
+const up=()=>{down=false};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+
+/* score */
+function evalScore(){
+ let cov=0,ok=0;for(const i of ins){const t=th[i];if(t>=.35){cov++;if(t>=.5&&t<=1.8)ok++}}
+ const coverage=cov/ins.length,uni=cov?ok/cov:0,tot=inA+outA,over=tot>0?outA/tot:0;
+ const score=tot?Math.round(Math.max(0,coverage*50+uni*30+(1-over)*20-Math.min(20,drips*2))):0;
+ return{coverage,uni,over,score};
+}
+function showResult(broken){
+ const r=evalScore(),score=broken?0:r.score;
+ const rank=broken?'折れちゃった…':score>=90?'屋台の職人!!!':score>=80?'売り物レベル!!':score>=70?'おいしそう!':score>=50?'バナナが美味しいからまぁ味は大丈夫':'修行して参れ';
+ let best=0;try{best=+localStorage.getItem('chocobanana-best')||0;if(score>best){best=score;localStorage.setItem('chocobanana-best',score)}}catch(e){best=Math.max(best,score)}
+ $('rTitle').textContent=broken?'バナナが折れました':'できあがり';
+ $('rScore').textContent=score;$('rRank').textContent=rank;
+ const pct=v=>Math.round(v*100)+'%';
+ $('rList').innerHTML=`<dt>ぬれた範囲</dt><dd>${pct(r.coverage)}</dd><dt>ムラの少なさ</dt><dd>${pct(r.uni)}</dd><dt>はみ出し</dt><dd>${pct(r.over)}</dd><dt>垂れた回数</dt><dd>${drips}回</dd><dt>折れなかった</dt><dd>${broken?'×':'○'}</dd><dt>ベスト</dt><dd>${best}点</dd>`;
+ shareText=`バーチャルのチョコバナナぬりぬりで${score}点!(${rank}) #バーチャルのチョコバナナぬりぬり\n${PAGE}`;
+ $('shareNote').hidden=true;$('rImg').hidden=true;$('btnSave').hidden=true;resBlob=null;
+ if(!broken)makeImage(score,rank);
+ $('result').hidden=false;
+}
+function lockSw(){started=true}
+function hardenPen(){for(const i of ins)if(th[i]>.02)pen[i]=1;if(!penMode){penMode=true;$('lblColor').textContent='ペンの色';msg('チョコペンモード!');const h=$('hint');h.textContent='チョコペンモード:垂れない細い線で描けるよ。色も変えてOK';h.style.opacity=1}}
+const PAGE='https://virtualbanana877.github.io/VirtualChocolateBanana';
+let shareText='';
+function makeImage(score,rank){
+ const oc=document.createElement('canvas');oc.width=1080;oc.height=1350;
+ const o=oc.getContext('2d'),g=o.createLinearGradient(0,0,0,1350);g.addColorStop(0,'#ffd6e3');g.addColorStop(1,'#fff1c7');o.fillStyle=g;o.fillRect(0,0,1080,1350);
+ const sc=2.1,sb=blobs,so=snap;blobs=[];snap=true;ctx=o;
+ o.setTransform(sc,0,0,sc,540-205*sc,600-360*sc);
+ drawBanana();
+ ctx=mainCtx;blobs=sb;snap=so;
+ o.setTransform(1,0,0,1,0,0);o.textAlign='center';o.fillStyle='#4a2412';
+ const ff='"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+ o.font='900 76px '+ff;o.fillText(score+'点',540,1210);
+ o.font='500 38px '+ff;o.fillText(rank,540,1262);o.font='900 40px '+ff;o.fillText('バーチャルのチョコバナナぬりぬり',540,1318);
+ oc.toBlob(b=>{if(!b)return;if(resUrl)URL.revokeObjectURL(resUrl);resBlob=b;resUrl=URL.createObjectURL(b);$('rImg').src=resUrl;$('rImg').hidden=false;$('btnSave').href=resUrl;$('btnSave').hidden=false});
+}
+async function shareX(){
+ const intent='https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText);
+ if(!resBlob){window.open(intent,'_blank','noopener');return}
+ const file=new File([resBlob],'chocobanana.png',{type:'image/png'});
+ const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent));
+ try{if(mobile&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:shareText});return}}catch(e){if(e&&e.name==='AbortError')return}
+ const n=$('shareNote');n.hidden=false;let ok=false;
+ try{await navigator.clipboard.write([new ClipboardItem({'image/png':resBlob})]);ok=true}catch(e){}
+ if(ok){const w=window.open(intent,'_blank');if(w)w.opener=null}
+ n.innerHTML=ok?'画像をコピーしました。<a href="'+intent+'" target="_blank" rel="noopener">Xの投稿画面を開いて</a>貼り付けてね(Ctrl+V / ⌘V)':'<a href="'+intent+'" target="_blank" rel="noopener">Xの投稿画面を開き</a>、「画像を保存」した画像を添付してね';
+}
+function spawnSprinkles(){
+ const cand=[];for(const i of ins)if(th[i]>=.3)cand.push(i);
+ if(!cand.length){msg('先にチョコを塗ろう');return}
+ const n=Math.min(260,60+Math.round(cand.length/ins.length*220)),cs=['#ff4d6d','#ffd23f','#3ddc97','#4cc9f0','#b388ff','#ff9f1c'];
+ for(let k=0;k<n;k++){const i=cand[Math.floor(Math.random()*cand.length)],r=Math.floor(i/COLS),c=i%COLS;
+  sprinkles.push({x:GX+(c+Math.random())*C,y:GY+(r+Math.random())*C,a:Math.random()*PI,c:cs[Math.floor(Math.random()*cs.length)],d:Math.random()*.8,i,b0:fresh[i],t0:time})}
+}
+function reset(){
+ th.fill(0);blobs=[];gauge=100;strain=0;drips=0;inA=0;outA=0;state='play';down=false;btime=0;sprinkles=[];fresh.fill(0);pen.fill(0);penMode=false;$('lblColor').textContent='いろ';spT=0;resShown=false;oBank=0;started=false;
+ document.querySelectorAll('.sw').forEach(b=>b.disabled=false);$('hint').style.opacity=1;$('hint').textContent='指でなぞって塗る。止めるとドロッと垂れるよ';
+ $('result').hidden=true;$('msg').classList.remove('show');
+}
+$('btnDone').onclick=()=>{if(state!=='play')return;state='done';down=false;freeze();lockSw();resShown=true;showResult(false)};
+$('btnSpray').onclick=()=>{if(state!=='play')return;if(!ins.some(i=>th[i]>=.3)){msg('先にチョコを塗ろう');return}spawnSprinkles();hardenPen()};
+$('helpBtn').onclick=()=>{$('help').hidden=false};$('btnHelpOk').onclick=()=>{$('help').hidden=true};
+$('btnShare').onclick=shareX;
+$('btnReset').onclick=reset;$('btnAgain').onclick=reset;
+const sws=[...document.querySelectorAll('.sw')];
+sws.forEach(b=>b.onclick=()=>{col=b.dataset.c;sws.forEach(x=>x.classList.toggle('on',x===b))});
+
+/* loop */
+let last=performance.now(),acc=0,shown=false;
+function loop(now){
+ const dt=Math.min(.05,(now-last)/1000);last=now;time+=dt;acc+=dt;
+ while(acc>=1/60){acc-=1/60;if(state==='play')tick(1/60);else if(state==='broken'){btime+=1/60;if(btime>1.8&&!resShown){resShown=true;showResult(true)}}else if(state==='done'){spT+=1/60;if(spT>1.6&&!resShown){resShown=true;showResult(false)}}updBlobs(1/60)}
+ updChoco();render();
+ $('gChoco').style.width=gauge+'%';$('pChoco').textContent=Math.ceil(gauge);$('gStrain').style.width=Math.min(100,strain*100)+'%';
+ requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
